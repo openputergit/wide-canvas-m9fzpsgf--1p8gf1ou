@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tour Guide - Konark Sun Temple</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .neubrutalism {
+            border: 3px solid black;
+            box-shadow: 5px 5px 0px black;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            aspect-ratio: 16/9;
+        }
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-[#FFE5E5] min-h-screen p-4">
+    <main class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <header class="bg-[#FF9B9B] neubrutalism p-6 mb-8 rounded-lg">
+            <h1 class="text-3xl font-bold">AI Tour Guide</h1>
+            <p class="mt-2">Explore Konark Sun Temple with AI-powered insights</p>
+        </header>
+
+        <!-- Camera Section -->
+        <div class="bg-white neubrutalism p-6 rounded-lg mb-8">
+            <div class="video-container neubrutalism overflow-hidden rounded-lg mb-4">
+                <video id="videoElement" autoplay playsinline></video>
+                <div id="loadingIndicator" class="hidden absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                    <i class="bi bi-arrow-repeat text-4xl text-white loading"></i>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 flex-wrap">
+                <button id="startCamera" class="bg-[#FF9B9B] neubrutalism px-6 py-2 rounded hover:bg-[#FF8080] active:translate-x-1 active:translate-y-1 active:shadow-none">
+                    <i class="bi bi-camera"></i> Start Camera
+                </button>
+                <button id="stopCamera" class="bg-[#FF9B9B] neubrutalism px-6 py-2 rounded hover:bg-[#FF8080] active:translate-x-1 active:translate-y-1 active:shadow-none" disabled>
+                    <i class="bi bi-camera-video-off"></i> Stop Camera
+                </button>
+                <button id="toggleNarration" class="bg-[#FF9B9B] neubrutalism px-6 py-2 rounded hover:bg-[#FF8080] active:translate-x-1 active:translate-y-1 active:shadow-none">
+                    <i class="bi bi-volume-up"></i> Toggle Narration
+                </button>
+            </div>
+        </div>
+
+        <!-- Info Display -->
+        <div id="infoDisplay" class="bg-white neubrutalism p-6 rounded-lg">
+            <h2 class="text-2xl font-bold mb-4">Konark Sun Temple</h2>
+            <div id="detectedInfo" class="space-y-4">
+                <p>The Konark Sun Temple is a 13th-century CE Sun temple at Konark about 35 kilometres northeast from Puri on the coastline of Odisha, India. The temple is attributed to king Narasimhadeva I of the Eastern Ganga Dynasty about 1250 CE.</p>
+                <ul class="list-disc pl-6">
+                    <li>Built in the form of a giant chariot</li>
+                    <li>Features 24 intricately carved wheels</li>
+                    <li>UNESCO World Heritage Site</li>
+                    <li>Dedicated to the Hindu Sun God Surya</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        let stream = null;
+        let isNarrationEnabled = false;
+        const videoElement = document.getElementById('videoElement');
+        const startButton = document.getElementById('startCamera');
+        const stopButton = document.getElementById('stopCamera');
+        const toggleNarrationButton = document.getElementById('toggleNarration');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        // Initialize text-to-speech
+        const speechSynth = window.speechSynthesis;
+        
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                videoElement.srcObject = stream;
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                startLandmarkDetection();
+            } catch (err) {
+                console.error("Error accessing camera:", err);
+                alert("Error accessing camera. Please ensure you've granted camera permissions.");
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+                startButton.disabled = false;
+                stopButton.disabled = true;
+            }
+        }
+
+        function toggleNarration() {
+            isNarrationEnabled = !isNarrationEnabled;
+            toggleNarrationButton.innerHTML = isNarrationEnabled ? 
+                '<i class="bi bi-volume-mute"></i> Mute Narration' : 
+                '<i class="bi bi-volume-up"></i> Enable Narration';
+            
+            if (!isNarrationEnabled) {
+                speechSynth.cancel();
+            }
+        }
+
+        async function startLandmarkDetection() {
+            loadingIndicator.classList.remove('hidden');
+            
+            // Simulate AI detection with a basic timer
+            // In a real implementation, you'd integrate with AI Vision API here
+            setInterval(() => {
+                if (stream && isNarrationEnabled) {
+                    const utterance = new SpeechSynthesisUtterance(
+                        "Konark Sun Temple, also known as the Black Pagoda, was built in 13th century CE. " +
+                        "It is one of India's most magnificent monuments."
+                    );
+                    speechSynth.speak(utterance);
+                }
+            }, 10000);
+
+            loadingIndicator.classList.add('hidden');
+        }
+
+        // Event Listeners
+        startButton.addEventListener('click', startCamera);
+        stopButton.addEventListener('click', stopCamera);
+        toggleNarrationButton.addEventListener('click', toggleNarration);
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            stopCamera();
+        });
+
+        // Handle visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopCamera();
+            }
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
